@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      const audioInfo = await (await sunoApi).getClip(clipId);
+      const audioInfo = await ((await sunoApi).getSunoApi()).getClip(clipId);
 
       return new NextResponse(JSON.stringify(audioInfo), {
         status: 200,
@@ -28,8 +28,14 @@ export async function GET(req: NextRequest) {
           ...corsHeaders
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching audio:', error);
+
+      if (error.response.statusText === "Payment Required") {
+        if ( await (await sunoApi).changeClient() ) {
+          return await GET(req)
+        } 
+      }
 
       return new NextResponse(JSON.stringify({ error: 'Internal server error' }), {
         status: 500,

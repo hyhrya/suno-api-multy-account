@@ -4,13 +4,17 @@ import { corsHeaders } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   if (req.method === 'POST') {
     try {
-      const body = await req.json();
+      const body = await req.clone().json();
       const { prompt, make_instrumental, model, wait_audio } = body;
 
-      const audioInfo = await (await sunoApi).generate(
+      let sunoApiGot = (await sunoApi).getSunoApi()
+
+      console.info("Connected to " + sunoApiGot.self_index + " Suno Api")
+
+      const audioInfo = await sunoApiGot.generate(
         prompt,
         Boolean(make_instrumental),
         model || DEFAULT_MODEL,
@@ -26,6 +30,13 @@ export async function POST(req: NextRequest) {
       });
     } catch (error: any) {
       console.error('Error generating custom audio:', JSON.stringify(error.response.data));
+      if (error.response.statusText === "Payment Required") {
+        if ( await (await sunoApi).changeClient() ) {
+          console.info("Client switched to " + (process.env.SUNO_INDEX || "_"))
+          let resp = await POST(req)
+          return resp
+        } 
+      }
       if (error.response.status === 402) {
         return new NextResponse(JSON.stringify({ error: error.response.data.detail }), {
           status: 402,

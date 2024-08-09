@@ -4,6 +4,8 @@ import pino from 'pino';
 import { wrapper } from "axios-cookiejar-support";
 import { CookieJar } from "tough-cookie";
 import { sleep } from "@/lib/utils";
+import { RedirectStatusCode } from 'next/dist/client/components/redirect-status-code';
+import { getServerSideProps } from 'next/dist/build/templates/pages';
 
 const logger = pino();
 export const DEFAULT_MODEL = "chirp-v3-5";
@@ -35,7 +37,10 @@ class SunoApi {
   private sid?: string;
   private currentToken?: string;
 
-  constructor(cookie: string) {
+  self_index: number;
+
+  constructor(cookie: string, self_index: number) {
+    this.self_index = self_index
     const cookieJar = new CookieJar();
     const randomUserAgent = new UserAgent(/Chrome/).random().toString();
     this.client = wrapper(axios.create({
@@ -219,6 +224,7 @@ class SunoApi {
     );
     logger.info("generateSongs Response:\n" + JSON.stringify(response.data, null, 2));
     if (response.status !== 200) {
+      console.error("tomato", response.data)
       throw new Error("Error response:" + response.statusText);
     }
     const songIds = response.data['clips'].map((audio: any) => audio.id);
@@ -383,7 +389,7 @@ class SunoApi {
     return response.data;
   }
 
-  public async get_credits(): Promise<object> {
+  public async get_credits(): Promise<{credits_left: number, period: string, monthly_limit: number, monthly_usage: number}> {
     await this.keepAlive(false);
     const response = await this.client.get(`${SunoApi.BASE_URL}/api/billing/info/`);
     return {
@@ -395,13 +401,59 @@ class SunoApi {
   }
 }
 
-const newSunoApi = async (cookie: string) => {
-  const sunoApi = new SunoApi(cookie);
-  return await sunoApi.init();
+class SunoApiMan {
+  sunos: Array<SunoApi>;
+  //sunoIndex: number;
+  cookies: string[];
+  constructor (cookies: string) {
+    this.sunos = [];
+    this.cookies = JSON.parse(cookies);
+    //this.sunoIndex = 0;
+  }
+
+  public async init(): Promise<SunoApiMan> {
+    for (var sunoIndex = 0;  sunoIndex < this.cookies.length; sunoIndex++) {
+      let sun = new SunoApi( this.cookies[sunoIndex], sunoIndex );
+      await sun.init(); 
+      if ( sun instanceof SunoApi ) {
+        this.sunos.push( sun );
+      }
+    }
+    console.info("Found " + this.sunos.length + " Suno Api Users")
+    console.info("Current Suno Api index: " + process.env.SUNO_INDEX)
+    return this;
+  }
+
+  public getSunoApi(): SunoApi {
+    if (!process.env.SUNO_INDEX) { process.env.SUNO_INDEX = "0"; }
+    return (this.sunos[parseInt(process.env.SUNO_INDEX)]);
+  }
+
+  public async changeClient(): Promise<boolean> {
+    for ( var willIndex = 0; willIndex < this.sunos.length; willIndex++) {
+      if (((await this.sunos[willIndex].get_credits()).credits_left) > 9 ) {
+        process.env.SUNO_INDEX = willIndex.toString();
+        return true;
+      }
+    }
+    return false;
+  }
+
 }
 
-if (!process.env.SUNO_COOKIE) {
-  console.log("Environment does not contain SUNO_COOKIE.", process.env)
+//const newSunoApi = async (cookie: string) => {
+//  const sunoApi = new SunoApi(cookie);
+//  return await sunoApi.init();
+//}
+
+const newSunoApiMan = async (cookeis: string) => {
+  if (!process.env.SUNO_INDEX) { process.env.SUNO_INDEX = "0"; }
+  const sunoApiMan = new SunoApiMan(cookeis);
+  return await sunoApiMan.init();
 }
 
-export const sunoApi = newSunoApi(process.env.SUNO_COOKIE || '');
+if (!process.env.SUNO_COOKIES) {
+  console.log("Environment does not contain SUNO_COOKIES.", process.env)
+}
+
+export let sunoApi = newSunoApiMan((process.env.SUNO_COOKIES || ''))

@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
 
-    const body = await req.json();
+    const body = await req.clone().json();
 
     let userMessage = null;
     const { messages } = body;
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     }
 
 
-    const audioInfo = await (await sunoApi).generate(userMessage.content, true, DEFAULT_MODEL, true);
+    const audioInfo = await ((await sunoApi).getSunoApi()).generate(userMessage.content, true, DEFAULT_MODEL, true);
 
     const audio = audioInfo[0]
     const data = `## Song Title: ${audio.title}\n![Song Cover](${audio.image_url})\n### Lyrics:\n${audio.lyric}\n### Listen to the song: ${audio.audio_url}`
@@ -43,6 +43,11 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error generating audio:', JSON.stringify(error.response.data));
+    if (error.response.statusText === "Payment Required") {
+      if ( await (await sunoApi).changeClient() ) {
+        return await POST(req)
+      } 
+    }
     return new NextResponse(JSON.stringify({ error: 'Internal server error: ' + JSON.stringify(error.response.data.detail) }), {
       status: 500,
       headers: {

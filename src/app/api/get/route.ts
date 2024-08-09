@@ -10,11 +10,15 @@ export async function GET(req: NextRequest) {
       const url = new URL(req.url);
       const songIds = url.searchParams.get('ids');
       let audioInfo = [];
+      let sunoApiGot = (await sunoApi).getSunoApi()
+
+      console.info("Connected to " + sunoApiGot.self_index + " Suno Api")
+
       if (songIds && songIds.length > 0) {
         const idsArray = songIds.split(',');
-        audioInfo = await (await sunoApi).get(idsArray);
+        audioInfo = await (sunoApiGot).get(idsArray);
       } else {
-        audioInfo = await (await sunoApi).get();
+        audioInfo = await (sunoApiGot).get();
       }
 
       return new NextResponse(JSON.stringify(audioInfo), {
@@ -24,8 +28,15 @@ export async function GET(req: NextRequest) {
           ...corsHeaders
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching audio:', error);
+
+      
+      if (error.response.statusText === "Payment Required") {
+        if ( await (await sunoApi).changeClient() ) {
+          return await GET(req)
+        } 
+      }
 
       return new NextResponse(JSON.stringify({ error: 'Internal server error' }), {
         status: 500,

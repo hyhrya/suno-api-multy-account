@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   if (req.method === 'GET') {
     try {
 
-      const limit = await (await sunoApi).get_credits();
+      const limit = await ((await sunoApi).getSunoApi()).get_credits();
 
 
       return new NextResponse(JSON.stringify(limit), {
@@ -18,8 +18,14 @@ export async function GET(req: NextRequest) {
           ...corsHeaders
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching limit:', error);
+
+      if (error.response.statusText === "Payment Required") {
+        if ( await (await sunoApi).changeClient() ) {
+          return await GET(req)
+        } 
+      }
 
       return new NextResponse(JSON.stringify({ error: 'Internal server error. ' + error }), {
         status: 500,

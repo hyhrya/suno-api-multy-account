@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   if (req.method === 'POST') {
     try {
-      const body = await req.json();
+      const body = await req.clone().json();
       const { audio_id, prompt, continue_at, tags, title, model } = body;
 
       if (!audio_id) {
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      const audioInfo = await (await sunoApi)
+      const audioInfo = await ((await sunoApi).getSunoApi())
         .extendAudio(audio_id, prompt, continue_at, tags, title, model || DEFAULT_MODEL);
 
       return new NextResponse(JSON.stringify(audioInfo), {
@@ -32,6 +32,11 @@ export async function POST(req: NextRequest) {
       });
     } catch (error: any) {
       console.error('Error extend audio:', JSON.stringify(error.response.data));
+      if (error.response.statusText === "Payment Required") {
+        if ( await (await sunoApi).changeClient() ) {
+          return await POST(req)
+        } 
+      }
       if (error.response.status === 402) {
         return new NextResponse(JSON.stringify({ error: error.response.data.detail }), {
           status: 402,

@@ -8,9 +8,9 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   if (req.method === 'POST') {
     try {
-      const body = await req.json();
+      const body = await req.clone().json();
       const { prompt, tags, title, make_instrumental, model, wait_audio } = body;
-      const audioInfo = await (await sunoApi).custom_generate(
+      const audioInfo = await ((await sunoApi).getSunoApi()).custom_generate(
         prompt, tags, title,
         Boolean(make_instrumental),
         model || DEFAULT_MODEL,
@@ -25,6 +25,12 @@ export async function POST(req: NextRequest) {
       });
     } catch (error: any) {
       console.error('Error generating custom audio:', error.response.data);
+      if (error.response.statusText === "Payment Required") {
+        if ( await (await sunoApi).changeClient() ) {
+          console.info("Client switched to " + (process.env.SUNO_INDEX || "_"))
+          return await POST(req)
+        } 
+      }
       if (error.response.status === 402) {
         return new NextResponse(JSON.stringify({ error: error.response.data.detail }), {
           status: 402,

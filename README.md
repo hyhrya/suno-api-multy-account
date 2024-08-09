@@ -26,6 +26,8 @@ Suno.ai v3 is an amazing AI music service. Although the official API is not yet 
 
 We discovered that some users have similar needs, so we decided to open-source this project, hoping you'll like it.
 
+*This so sad that you need to pay for more credits, this service allows you to take more.*
+
 ## Demo
 
 We have deployed an example bound to a free Suno account, so it has daily usage limits, but you can see how it runs:
@@ -37,13 +39,14 @@ We have deployed an example bound to a free Suno account, so it has daily usage 
 - Automatically keep the account active.
 - Compatible with the format of OpenAI’s `/v1/chat/completions` API.
 - Supports Custom Mode
-- One-click deployment to Vercel
+- One-click deployment to Vercel. *Not tested in this fork*
 - In addition to the standard API, it also adapts to the API Schema of Agent platforms like GPTs and Coze, so you can use it as a tool/plugin/Action for LLMs and integrate it into any AI Agent.
 - Permissive open-source license, allowing you to freely integrate and modify.
+- *Multy account*
 
 ## Getting Started
 
-### 1. Obtain the cookie of your app.suno.ai account
+### 1. Obtain the cookie*s* of your app.suno.ai account*s*
 
 1. Head over to [app.suno.ai](https://app.suno.ai) using your browser.
 2. Open up the browser console: hit `F12` or access the `Developer Tools`.
@@ -53,13 +56,15 @@ We have deployed an example bound to a free Suno account, so it has daily usage 
 6. Click on it and switch over to the `Header` tab.
 7. Locate the `Cookie` section, hover your mouse over it, and copy the value of the Cookie.
 
+*Repeat many times for more credits. For different accounts. Save all cookies*
+
 ![get cookie](https://github.com/gcui-art/suno-api/blob/main/public/get-cookie-demo.gif)
 
 ### 2. Clone and deploy this project
 
 You can choose your preferred deployment method:
 
-#### Deploy to Vercel
+#### Deploy to Vercel. *Not Tested In This Fork*
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fgcui-art%2Fsuno-api&env=SUNO_COOKIE&project-name=suno-api&repository-name=suno-api)
 
@@ -79,12 +84,12 @@ docker compose build && docker compose up
 
 ### 3. Configure suno-api
 
-- If deployed to Vercel, please add an environment variable `SUNO_COOKIE` in the Vercel dashboard, with the value of the cookie obtained in the first step.
+- If deployed to Vercel, please add an environment variable `SUNO_COOKIES` in the Vercel dashboard, with the value of the cookie obtained in the first step. *Not tested in this fork*
 
 - If you’re running this locally, be sure to add the following to your `.env` file:
 
 ```bash
-SUNO_COOKIE=<your-cookie>
+SUNO_COOKIES='["<your-cookie-1>", "<your-cookie-2>"]'
 ```
 
 ### 4. Run suno api
@@ -107,6 +112,22 @@ SUNO_COOKIE=<your-cookie>
 ```
 
 it means the program is running normally.
+
+---
+
+***For full start***\
+*For build you can use:*
+```bash
+npm run build
+```
+*After, start server with:*
+```bash
+npm run start
+```
+*You can change port using:*
+```bash
+npx next start -p <port>
+```
 
 ### 5. Use Suno API
 

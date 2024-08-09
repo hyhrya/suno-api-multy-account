@@ -7,10 +7,10 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   if (req.method === 'POST') {
     try {
-      const body = await req.json();
+      const body = await req.clone().json();
       const { prompt } = body;
 
-      const lyrics = await (await sunoApi).generateLyrics(prompt);
+      const lyrics = await ((await sunoApi).getSunoApi()).generateLyrics(prompt);
 
       return new NextResponse(JSON.stringify(lyrics), {
         status: 200,
@@ -21,6 +21,12 @@ export async function POST(req: NextRequest) {
       });
     } catch (error: any) {
       console.error('Error generating lyrics:', JSON.stringify(error.response.data));
+      if (error.response.statusText === "Payment Required") {
+        if ( await (await sunoApi).changeClient() ) {
+          console.info("Client switched to " + (process.env.SUNO_INDEX || "_"))
+          return await POST(req)
+        } 
+      }
       if (error.response.status === 402) {
         return new NextResponse(JSON.stringify({ error: error.response.data.detail }), {
           status: 402,
